@@ -1,7 +1,7 @@
 {
   "name": "@schema-weaver/migration-engine",
   "version": "0.1.0",
-  "description": "PostgreSQL schema introspection, diff, DDL generation, and migration execution engine. Supports PostgreSQL 10-18 with 37 object types.",
+  "description": "PostgreSQL schema introspection, diff, DDL generation, and migration execution engine. Supports PostgreSQL 10-18 with 50+ object types.",
   "license": "BSL-1.1",
   "author": "Schema Weaver",
   "repository": {
