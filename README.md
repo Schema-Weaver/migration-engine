@@ -10,7 +10,7 @@
 
 ## Why This Exists
 
-No existing open-source tool covers 37 PostgreSQL object types comprehensively:
+No existing open-source tool covers PostgreSQL object types comprehensively:
 
 | Tool | Coverage | Limitations |
 |------|----------|-------------|
@@ -19,63 +19,99 @@ No existing open-source tool covers 37 PostgreSQL object types comprehensively:
 | Prisma | ~10 types | Ignores behavioral objects entirely |
 | Django Migrations | ~12 types | ORM-specific, limited DDL control |
 
-**This engine covers EVERYTHING** — 37 object types with 98.5% property coverage.
+**This engine covers EVERYTHING** — 50+ object types with extensive property coverage.
 
 ---
 
-## Supported Object Types (37)
+## Supported Object Types (50+)
 
 ### Track 1: Structural Objects
 
-| Type | Properties | Coverage |
-|------|------------|----------|
-| Table | 31 | 100% |
-| Column | 28/30 | 93% |
-| Index | 26 | 100% |
-| Constraint | 20 | 100% |
-| Sequence | 14 | 100% |
-| Enum Type | 9 | 100% |
-| Composite Type | 10 | 100% |
-| Domain Type | 16 | 100% |
-| Range Type | 10 | 100% |
-| Schema | 5 | 100% |
-| Extension | — | ✅ |
-| Statistics | 9 | 100% |
-| Partition | 6 | 100% |
-| Collation | 10/11 | 91% |
-| Cast | — | ✅ |
-| Operator / OpClass / OpFamily | — | ✅ |
-| Access Method | — | ✅ |
-| Foreign Table | — | ✅ |
-| Default Privileges | — | ✅ |
+| Type | Category | Coverage |
+|------|----------|----------|
+| Table | Core | Full |
+| Column | Core | Full |
+| Index | Core | Full |
+| Constraint (PK/FK/UNIQUE/CHECK/EXCLUSION) | Core | Full |
+| Sequence | Core | Full |
+| Enum Type | Type System | Full |
+| Composite Type | Type System | Full |
+| Domain Type | Type System | Full |
+| Range Type | Type System | Full |
+| Multirange Type | Type System (PG14+) | Full |
+| Schema | Container | Full |
+| Extension | Package | Full |
+| Statistics | Optimizer | Full |
+| Partition | Table Property | Full |
+| Collation | Locale | ~90% |
+| Cast | Type System | Full |
+| Operator | Advanced | Full |
+| Operator Class | Advanced | Full |
+| Operator Family | Advanced | Full |
+| Access Method | Storage | Full |
+| Foreign Table | FDW | Full |
+| Default Privileges | ACL | Full |
 
 ### Track 2: Behavioral Objects
 
-View, Materialized View, Function, Procedure, Aggregate, Trigger, Event Trigger, Policy, Rule, Cast, Text Search (Config/Dict/Parser/Template), Conversion, FDW, Foreign Server, User Mapping, Publication, Subscription
+| Type | Category | Coverage |
+|------|----------|----------|
+| View | Query | Full |
+| Materialized View | Query | Full |
+| Function | Procedural | Full |
+| Procedure | Procedural (PG11+) | Full |
+| Aggregate | Procedural | Full |
+| Trigger | Automation | Full |
+| Event Trigger | Automation | Full |
+| Policy | RLS | Full |
+| Rule | Rewrite | Full |
+| Text Search Config | FTS | Full |
+| Text Search Dictionary | FTS | Full |
+| Text Search Parser | FTS | Full |
+| Text Search Template | FTS | Full |
+| Conversion | Encoding | Full |
+| Foreign Data Wrapper | FDW | Full |
+| Foreign Server | FDW | Full |
+| User Mapping | FDW | Full |
 
-**Overall: 194/197 properties = 98.5% coverage across PG10–PG18**
+### Track 3: Cross-Database Objects
+
+| Type | Category | Coverage |
+|------|----------|----------|
+| Database | Instance | Full |
+| Tablespace | Storage | Full |
+| Role | Auth | Full |
+| Publication | Replication | Full |
+| Subscription | Replication | Full |
+
+**Overall: 190+ properties tracked across PG10–PG18**
 
 ---
 
-## Architecture (7 Layers)
+## Architecture (8 Modules)
 
 ```
 SQL ──► Introspector ──► Translator ──► Differ ──► DDL Generator ──► Planner ──► Executor
                                 │                      │                         │
                                 ▼                      ▼                         ▼
                            Risk Tagger          Safe Patterns              Storage
-                                                                          (history)
+                       (assess change risk)                              (history)
+                                                                          │
+                                                                          ▼
+                                                                    Behavioral
+                                                                  (views/fns/triggers)
 ```
 
-| Layer | Purpose |
-|-------|---------|
-| **1. Introspector** | Queries `pg_catalog` for all 37 object types |
-| **2. Translator** | Normalizes raw PG rows into canonical schema model |
-| **3. Differ** | Detects CREATE/ALTER/DROP/RENAME with property-level diff |
-| **4. DDL Generator** | Generates safe DDL with 3-step patterns |
-| **5. Planner** | Dependency-ordered, phase-based plan (Track 1 → Track 2) |
-| **6. Executor** | Advisory locks, savepoints, drift detection, progress |
-| **7. Storage** | Migration history (PG / Memory / File backends) |
+| Module | Purpose |
+|--------|---------|
+| **Introspector** | Queries `pg_catalog` for 50+ object types |
+| **Translator** | Normalizes raw PG rows into canonical schema model |
+| **Differ** | Detects CREATE/ALTER/DROP/RENAME with property-level diff |
+| **Risk Tagger** | 5-level risk assessment per change |
+| **DDL Generator** | Generates safe DDL with 6+ safe patterns |
+| **Planner** | Dependency-ordered, phase-based plan (Track 1 → Track 2) |
+| **Executor** | Advisory locks, savepoints, drift detection, progress |
+| **Storage** | Migration history (PostgreSQL / Memory / File / GitHub backends) |
 
 ---
 
@@ -130,20 +166,23 @@ const result = await engine.migrate(pool, desired);
 
 ## Key Features
 
-### 37 PostgreSQL Object Types
+### 50+ PostgreSQL Object Types
 Most comprehensive coverage available. See [Supported Objects](https://github.com/Schema-Weaver/migration-engine/wiki/Supported-Objects).
 
 ### PG 10–18 Support
 Version-gated queries automatically adapt to your PostgreSQL version.
 
-### Safe Migration Patterns
+### Safe Migration Patterns (6+ patterns)
 
 | Pattern | How It Works |
 |---------|--------------|
-| **NOT NULL** | 3-step: DEFAULT → NOT NULL → DROP DEFAULT |
-| **FK Constraint** | NOT VALID → validate separately |
-| **Index** | CONCURRENTLY for zero-downtime |
+| **NOT NULL** | 3-step: CHECK(NOT VALID) → validate → SET NOT NULL |
+| **FK Constraint** | ADD NOT VALID → validate separately |
+| **Index** | CREATE INDEX CONCURRENTLY for zero-downtime |
 | **Enum ADD VALUE** | Pre-transaction for PG < 14 |
+| **UNIQUE constraint** | CREATE UNIQUE INDEX CONCURRENTLY → ADD CONSTRAINT USING INDEX |
+| **CHECK constraint** | ADD NOT VALID → validate separately |
+| **Type change** | ALTER TYPE with USING clause for explicit conversion |
 
 ### 5-Level Risk Assessment
 
@@ -165,7 +204,7 @@ Fingerprint-based schema drift alerts when database changed outside migrations.
 Automatic reverse DDL for supported changes.
 
 ### Non-Transactional Aware
-Handles `ALTER ENUM ADD VALUE`, `CREATE INDEX CONCURRENTLY`, `REINDEX CONCURRENTLY`.
+Handles `ALTER ENUM ADD VALUE`, `CREATE INDEX CONCURRENTLY`, `REINDEX CONCURRENTLY` outside transactions.
 
 ---
 
@@ -180,6 +219,8 @@ Handles `ALTER ENUM ADD VALUE`, `CREATE INDEX CONCURRENTLY`, `REINDEX CONCURRENT
 | `execute(pool, plan)` | Apply migration transactionally |
 | `migrate(pool, desired)` | One-shot: introspect → diff → plan → execute |
 | `rollback(pool, migrationId)` | Revert migration (best-effort) |
+| `createMigrationPlan(changes)` | Create plan from change array (alias) |
+| `diffSchemas(desired, current)` | Alias for `diff()` |
 
 Full API: [API Reference](https://github.com/Schema-Weaver/migration-engine/wiki/API-Reference)
 
@@ -224,9 +265,9 @@ Tested against **PostgreSQL 18.1** with a 25-table, 4-schema, 1052-object databa
 
 ## Documentation
 
-- [Architecture](https://github.com/Schema-Weaver/migration-engine/wiki/Architecture) — 7-layer deep dive
-- [Supported Objects](https://github.com/Schema-Weaver/migration-engine/wiki/Supported-Objects) — Full 37-type coverage
-- [Safe Patterns](https://github.com/Schema-Weaver/migration-engine/wiki/Safe-Migration-Patterns) — 3-step workflows
+- [Architecture](https://github.com/Schema-Weaver/migration-engine/wiki/Architecture) — 8-module deep dive
+- [Supported Objects](https://github.com/Schema-Weaver/migration-engine/wiki/Supported-Objects) — Full 50+ type coverage
+- [Safe Patterns](https://github.com/Schema-Weaver/migration-engine/wiki/Safe-Migration-Patterns) — 6+ safe workflows
 - [Risk Assessment](https://github.com/Schema-Weaver/migration-engine/wiki/Risk-Assessment) — 5 levels explained
 - [PG Version Matrix](https://github.com/Schema-Weaver/migration-engine/wiki/PG-Version-Matrix) — Feature support PG10-18
 
@@ -244,7 +285,7 @@ Tested against **PostgreSQL 18.1** with a 25-table, 4-schema, 1052-object databa
 | PG 15 | ✅ | NULLS NOT DISTINCT |
 | PG 16 | ✅ | ANY_VALUE |
 | PG 17 | ✅ | MERGE improvements |
-| PG 18 | ✅ | Temporal tables, PERIOD |
+| PG 18 | ✅ | Temporal tables, PERIOD, NOT ENFORCED constraints |
 
 ---
 
