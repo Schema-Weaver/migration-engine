@@ -4,13 +4,6 @@
 [![license](https://img.shields.io/badge/license-BSL--1.1-red.svg)](https://github.com/Schema-Weaver/migration-engine/blob/main/LICENSE)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-10%20%E2%80%93%2018-blue.svg)](https://www.postgresql.org/)
 
-> [!WARNING]
-> **Commercial Use License Required**
-> 
-> This package is licensed under the **Business Source License 1.1 (BSL)**. It is free for local development, testing, and evaluation purposes, but **requires a separate paid commercial license for production use**.
-> 
-> For commercial licensing: **vivek@vivekmind.com**
-
 **PostgreSQL schema introspection, diff, DDL generation, and safe migration execution.**
 
 ---
@@ -267,4 +260,4 @@ Contact: **vivek@vivekmind.com**
 
 ---
 
-Built by [Schema Weaver](https://schemaweaver.vivekmind.com) — the visual PostgreSQL IDE.
+Built by [Schema Weaver](https://schemaweaver.vivekmind.com) — the AI-native PostgreSQL workspace for developers.
