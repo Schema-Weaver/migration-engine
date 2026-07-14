@@ -1,7 +1,7 @@
-# @schema-weaver/migration-engine
+# pg-migration-engine
 
-[![npm version](https://img.shields.io/npm/v/@schema-weaver/migration-engine.svg)](https://www.npmjs.com/package/@schema-weaver/migration-engine)
-[![license](https://img.shields.io/badge/license-BSL--1.1-red.svg)](https://github.com/Schema-Weaver/migration-engine/blob/main/LICENSE)
+[![npm version](https://img.shields.io/npm/v/pg-migration-engine.svg)](https://www.npmjs.com/package/pg-migration-engine)
+[![license](https://img.shields.io/badge/license-BSL--1.1-red.svg)](https://github.com/Schema-Weaver/pg-migration-engine/blob/main/LICENSE)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-10%20%E2%80%93%2018-blue.svg)](https://www.postgresql.org/)
 
 **PostgreSQL schema introspection, diff, DDL generation, and safe migration execution.**
@@ -118,7 +118,7 @@ SQL ──► Introspector ──► Translator ──► Differ ──► DDL G
 ## Installation
 
 ```bash
-npm install @schema-weaver/migration-engine pg
+npm install pg-migration-engine pg
 ```
 
 ---
@@ -127,7 +127,7 @@ npm install @schema-weaver/migration-engine pg
 
 ```javascript
 import pg from 'pg';
-import { SwMigrationEngine } from '@schema-weaver/migration-engine';
+import { PgMigrationEngine } from 'pg-migration-engine';
 
 const pool = new pg.Pool({ 
   host: 'localhost', 
@@ -137,7 +137,7 @@ const pool = new pg.Pool({
   password: 'pass'
 });
 
-const engine = new SwMigrationEngine();
+const engine = new PgMigrationEngine();
 
 // Introspect current database
 const snapshot = await engine.introspect(pool);
@@ -167,7 +167,7 @@ const result = await engine.migrate(pool, desired);
 ## Key Features
 
 ### 50+ PostgreSQL Object Types
-Most comprehensive coverage available. See [Supported Objects](https://github.com/Schema-Weaver/migration-engine/wiki/Supported-Objects).
+Most comprehensive coverage available. See [Supported Objects](https://github.com/Schema-Weaver/pg-migration-engine/wiki/Supported-Objects).
 
 ### PG 10–18 Support
 Version-gated queries automatically adapt to your PostgreSQL version.
@@ -222,7 +222,7 @@ Handles `ALTER ENUM ADD VALUE`, `CREATE INDEX CONCURRENTLY`, `REINDEX CONCURRENT
 | `createMigrationPlan(changes)` | Create plan from change array (alias) |
 | `diffSchemas(desired, current)` | Alias for `diff()` |
 
-Full API: [API Reference](https://github.com/Schema-Weaver/migration-engine/wiki/API-Reference)
+Full API: [API Reference](https://github.com/Schema-Weaver/pg-migration-engine/wiki/API-Reference)
 
 ---
 
@@ -232,17 +232,17 @@ Full API: [API Reference](https://github.com/Schema-Weaver/migration-engine/wiki
 |---------|---------|
 | **[sw-agent](https://www.npmjs.com/package/@vivekmind/sw-agent)** | PostgreSQL connection pool, security, audit |
 | **[pg-ddl-parser](https://www.npmjs.com/package/pg-ddl-parser)** | DDL parsing (CREATE/ALTER/DROP → schema) |
-| **@schema-weaver/migration-engine** | Schema introspection, diff, migration |
+| **pg-migration-engine** | Schema introspection, diff, migration |
 
 ```javascript
 import { parsePostgresSQL } from 'pg-ddl-parser';
-import { SwMigrationEngine } from '@schema-weaver/migration-engine';
+import { PgMigrationEngine } from 'pg-migration-engine';
 
 // Parse DDL → desired schema
 const desired = parsePostgresSQL(fs.readFileSync('schema.sql', 'utf8'));
 
 // Migrate
-const engine = new SwMigrationEngine();
+const engine = new PgMigrationEngine();
 await engine.migrate(pool, convertParsedToSnapshot(desired));
 ```
 
@@ -265,11 +265,11 @@ Tested against **PostgreSQL 18.1** with a 25-table, 4-schema, 1052-object databa
 
 ## Documentation
 
-- [Architecture](https://github.com/Schema-Weaver/migration-engine/wiki/Architecture) — 8-module deep dive
-- [Supported Objects](https://github.com/Schema-Weaver/migration-engine/wiki/Supported-Objects) — Full 50+ type coverage
-- [Safe Patterns](https://github.com/Schema-Weaver/migration-engine/wiki/Safe-Migration-Patterns) — 6+ safe workflows
-- [Risk Assessment](https://github.com/Schema-Weaver/migration-engine/wiki/Risk-Assessment) — 5 levels explained
-- [PG Version Matrix](https://github.com/Schema-Weaver/migration-engine/wiki/PG-Version-Matrix) — Feature support PG10-18
+- [Architecture](https://github.com/Schema-Weaver/pg-migration-engine/wiki/Architecture) — 8-module deep dive
+- [Supported Objects](https://github.com/Schema-Weaver/pg-migration-engine/wiki/Supported-Objects) — Full 50+ type coverage
+- [Safe Patterns](https://github.com/Schema-Weaver/pg-migration-engine/wiki/Safe-Migration-Patterns) — 6+ safe workflows
+- [Risk Assessment](https://github.com/Schema-Weaver/pg-migration-engine/wiki/Risk-Assessment) — 5 levels explained
+- [PG Version Matrix](https://github.com/Schema-Weaver/pg-migration-engine/wiki/PG-Version-Matrix) — Feature support PG10-18
 
 ---
 
@@ -301,4 +301,4 @@ Contact: **vivek@vivekmind.com**
 
 ---
 
-Built by [Schema Weaver](https://schemaweaver.vivekmind.com) — the AI-native PostgreSQL workspace for developers.
+Built by [Schema Weaver](https://schemaweaver.vivekmind.com).
