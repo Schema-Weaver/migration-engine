@@ -1,0 +1,52 @@
+{
+  "name": "@schema-weaver/migration-engine",
+  "version": "0.1.0",
+  "description": "PostgreSQL schema introspection, diff, DDL generation, and migration execution engine. Supports PostgreSQL 10-18 with 37 object types.",
+  "license": "BSL-1.1",
+  "author": "Schema Weaver",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Schema-Weaver/migration-engine.git"
+  },
+  "homepage": "https://schemaweaver.vivekmind.com",
+  "bugs": {
+    "url": "https://github.com/Schema-Weaver/migration-engine/issues"
+  },
+  "keywords": [
+    "postgresql",
+    "postgres",
+    "migration",
+    "schema",
+    "ddl",
+    "introspection",
+    "diff",
+    "pg18"
+  ],
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": {
+      "import": "./src/index.js",
+      "types": "./src/types/schema.d.ts"
+    }
+  },
+  "files": [
+    "src/",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "pg": "^8.13.0"
+  },
+  "peerDependencies": {
+    "pg-ddl-parser": ">=4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "pg-ddl-parser": {
+      "optional": true
+    }
+  }
+}

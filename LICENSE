@@ -1,0 +1,35 @@
+Business Source License 1.1
+
+Copyright (c) 2026 Schema Weaver
+
+Terms
+The Licensor hereby grants you the right to copy, modify, create derivative
+works, redistribute, and make use of the Licensed Work, provided that:
+
+1. **Non-Production Use**: You may use the Licensed Work for development,
+   testing, evaluation, and non-production purposes without restriction.
+
+2. **Production Use**: Use of the Licensed Work in a production environment
+   (defined as an environment used by end users for business-critical
+   operations) requires a separate commercial license agreement with the
+   Licensor.
+
+3. **Commercial License**: To obtain a commercial license for production use,
+   contact: vivek@vivekmind.com
+
+4. **Change Date**: This license will automatically convert to the Apache
+   License, Version 2.0 on January 1, 2030, at which point the Licensed Work
+   will become freely available for any purpose, including production use.
+
+5. **No Trademark Rights**: This license does not grant you any right to use
+   the trademarks, service marks, or logos of the Licensor.
+
+6. **Disclaimer**: THE LICENSED WORK IS PROVIDED "AS IS", WITHOUT WARRANTY
+   OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+   WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND
+   NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+   LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+   OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+   WITH THE LICENSED WORK.
+
+See https://mariadb.com/bsl11/ for the full text of the BSL 1.1 license.

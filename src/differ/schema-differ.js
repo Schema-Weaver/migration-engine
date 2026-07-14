@@ -1,0 +1,309 @@
+import crypto from 'crypto';
+import { ObjectMatcher } from './object-matcher.js';
+import { PropertyDiffer } from './property-differ.js';
+import { DependencyResolver } from './dependency-resolver.js';
+import { ChangeClassifier } from './change-classifier.js';
+import { RiskTagger } from './risk-tagger.js';
+
+/**
+ * Schema Differ - Main orchestrator for comparing two schema snapshots.
+ * Produces a complete SchemaDiff with all changes, properly ordered and classified.
+ */
+
+export class SchemaDiffer {
+  constructor(options = {}) {
+    this.pgVersion = options.pgVersion || 150000;
+    this.objectMatcher = new ObjectMatcher();
+    this.propertyDiffer = new PropertyDiffer();
+    this.dependencyResolver = new DependencyResolver();
+    this.changeClassifier = new ChangeClassifier();
+    this.riskTagger = new RiskTagger(this.pgVersion);
+  }
+
+  /**
+   * Diff two schema snapshots (desired vs current).
+   * @param {Object} desired - The desired/target schema
+   * @param {Object} current - The current/live schema
+   * @returns {Object} SchemaDiff
+   */
+  diff(desired, current) {
+    const startTime = Date.now();
+    const allChanges = [];
+
+    // Step 1: Match objects between snapshots
+    const matched = this.objectMatcher.match(desired, current);
+
+    // Step 2: Handle creates (objects only in desired)
+    for (const create of matched.creates) {
+      allChanges.push(this.createChangeObject('CREATE', create.objectType, create.key, null, create.object, create));
+    }
+
+    // Step 3: Handle drops (objects only in current)
+    for (const drop of matched.drops) {
+      allChanges.push(this.createChangeObject('DROP', drop.objectType, drop.key, drop.object, null, drop));
+    }
+
+    // Step 4: Handle detected renames
+    for (const rename of matched.renames) {
+      allChanges.push(this.createChangeObject('RENAME', rename.objectType, rename.key, rename, rename, rename, rename));
+    }
+
+    // Step 5: Property-level diff for matched objects
+    const propertyResults = this.propertyDiffer.diff(matched.matches, desired, current);
+    allChanges.push(...propertyResults.changes.map(c => {
+      let pluralKey = c.objectType + 's';
+      if (c.objectType === 'index') pluralKey = 'indexes';
+      else if (c.objectType === 'materializedView') pluralKey = 'materializedViews';
+      else if (c.objectType === 'operatorClass') pluralKey = 'operatorClasses';
+      else if (c.objectType === 'operatorFamily') pluralKey = 'operatorFamilies';
+      else if (c.objectType === 'defaultPrivileges') pluralKey = 'defaultPrivileges';
+      else if (c.objectType === 'foreignTable') pluralKey = 'tables';
+      else if (c.objectType === 'function' && desired.procedures?.[c.path]) pluralKey = 'procedures';
+      else if (c.objectType === 'function' && desired.aggregates?.[c.path]) pluralKey = 'aggregates';
+      else if (c.objectType === 'textSearchConfig') pluralKey = 'textSearchConfigs';
+      else if (c.objectType === 'textSearchDict') pluralKey = 'textSearchDictionaries';
+      else if (c.objectType === 'textSearchParser') pluralKey = 'textSearchParsers';
+      else if (c.objectType === 'textSearchTemplate') pluralKey = 'textSearchTemplates';
+
+      const beforeObj = current[pluralKey]?.[c.path] || null;
+      const afterObj = desired[pluralKey]?.[c.path] || null;
+
+      const changeObj = this.createChangeObject(
+        'ALTER',
+        c.objectType,
+        c.path,
+        beforeObj,
+        afterObj,
+        c,
+        c.property
+      );
+      changeObj.currentValue = c.currentValue;
+      changeObj.desiredValue = c.desiredValue;
+      return changeObj;
+    }));
+
+    // Step 6: Process warnings from property differ
+
+    // Step 7: Classify changes (track 1 vs track 2)
+    this.changeClassifier.classify(allChanges);
+
+    // Step 8: Resolve dependency order
+    const orderedChanges = this.dependencyResolver.resolve(allChanges, desired, current);
+
+    // Step 9: Tag risks
+    this.riskTagger.tag(orderedChanges);
+
+    // Step 10: Build output
+    return {
+      summary: this.buildSummary(orderedChanges),
+      changes: orderedChanges,
+      warnings: [...matched.renames.filter(r => !r.confirmed).map(r => ({
+        code: 'RENAME_UNCONFIRMED',
+        message: `Possible rename detected: ${r.oldName} → ${r.newName}`,
+        changeKey: r.key,
+        action: 'Confirm rename or treat as drop+add',
+      })), ...propertyResults.warnings],
+      dependencyGraph: this.dependencyResolver.getGraph(),
+      metadata: {
+        diffDuration: Date.now() - startTime,
+        pgVersion: this.pgVersion,
+        desiredChecksum: desired.checksum,
+        currentChecksum: current.checksum,
+      },
+    };
+  }
+
+  /**
+   * Create a standardized change object.
+   */
+  createChangeObject(changeType, objectType, objectKey, before, after, extra = {}, property = null) {
+    const id = `change_${crypto.randomUUID().slice(0, 8)}`;
+
+    return {
+      id,
+      changeType,
+      objectType,
+      objectKey,
+      schema: extra?.schema,
+      name: extra?.name || objectKey?.split('.').pop(),
+      property,
+      before: before || null,
+      after: after || null,
+      track: extra?.track || 1,
+      phase: extra?.phase || 10,
+      ddlStrategy: extra?.ddlStrategy || 'ALTER',
+      dependencies: extra?.dependencies || [],
+      dependents: [],
+      risk: extra?.risk || { level: 'none', categories: [], warnings: [] },
+      requiresRecreation: extra?.requiresRecreation || false,
+      safePatternAvailable: extra?.safePatternAvailable || false,
+      isNonTransactional: extra?.isTransactional === false,
+      pgVersionMinimum: extra?.pgVersionMinimum,
+      dataLossRisk: extra?.dataLossRisk,
+      ...extra,
+    };
+  }
+
+  /**
+   * Build summary statistics.
+   */
+  buildSummary(changes) {
+    const summary = {
+      totalChanges: changes.length,
+      creates: 0,
+      drops: 0,
+      alters: 0,
+      renames: 0,
+      recreates: 0,
+      replaces: 0,
+
+      byTrack: {
+        track1: { count: 0, phases: {} },
+        track2: { count: 0, phases: {} },
+      },
+
+      byPhase: {},
+
+      byObjectType: {},
+
+      riskSummary: {
+        critical: 0,
+        high: 0,
+        medium: 0,
+        low: 0,
+        none: 0,
+        categories: {},
+      },
+
+      requiresDowntime: false,
+      estimatedDuration: this.estimateDuration(changes),
+    };
+
+    for (const change of changes) {
+      // Count by change type
+      if (change.changeType === 'CREATE') summary.creates++;
+      else if (change.changeType === 'DROP') summary.drops++;
+      else if (change.changeType === 'ALTER') summary.alters++;
+      else if (change.changeType === 'RENAME') summary.renames++;
+      else if (change.changeType?.includes('RECREATE')) summary.recreates++;
+      else if (change.changeType?.includes('REPLACE')) summary.replaces++;
+
+      // Count by track
+      const track = change.track === 2 ? 'track2' : 'track1';
+      summary.byTrack[track].count++;
+      const phase = change.phase;
+      if (!summary.byTrack[track].phases[phase]) {
+        summary.byTrack[track].phases[phase] = 0;
+      }
+      summary.byTrack[track].phases[phase]++;
+
+      // Count by phase
+      if (!summary.byPhase[phase]) summary.byPhase[phase] = { count: 0, name: this.getPhaseName(phase) };
+      summary.byPhase[phase].count++;
+
+      // Count by object type
+      const objType = change.objectType;
+      if (!summary.byObjectType[objType]) summary.byObjectType[objType] = 0;
+      summary.byObjectType[objType]++;
+
+      // Risk counts
+      const level = change.risk?.level || 'none';
+      summary.riskSummary[level]++;
+
+      for (const cat of (change.risk?.categories || [])) {
+        if (!summary.riskSummary.categories[cat]) {
+          summary.riskSummary.categories[cat] = 0;
+        }
+        summary.riskSummary.categories[cat]++;
+      }
+
+      // Check for downtime
+      if (change.risk?.requiresDowntime) {
+        summary.requiresDowntime = true;
+      }
+    }
+
+    return summary;
+  }
+
+  /**
+   * Get human-readable phase name.
+   */
+  getPhaseName(phase) {
+    const phases = {
+      1: 'pre_check',
+      2: 'advisory_lock',
+      3: 'extensions',
+      4: 'types',
+      5: 'schemas',
+      6: 'tables_create',
+      7: 'columns_add',
+      8: 'sequences',
+      9: 'indexes_create',
+      10: 'constraints_non_fk',
+      11: 'data_migration',
+      12: 'constraints_fk',
+      13: 'validate_constraints',
+      14: 'views',
+      15: 'materialized_views',
+      16: 'functions',
+      17: 'triggers',
+      18: 'policies',
+      19: 'rules',
+      20: 'behavioral_other',
+      21: 'grants',
+      22: 'comments',
+      23: 'indexes_concurrent',
+      24: 'cleanup',
+      25: 'post_check',
+    };
+    return phases[phase] || `phase_${phase}`;
+  }
+
+  /**
+   * Estimate migration duration.
+   */
+  estimateDuration(changes) {
+    let seconds = 0;
+
+    for (const change of changes) {
+      switch (change.objectType) {
+        case 'index':
+          seconds += change.isConcurrent ? 30 : 2;
+          break;
+        case 'constraint':
+          seconds += change.constraintType === 'FOREIGN_KEY' ? 5 : 2;
+          break;
+        case 'table':
+          seconds += change.changeType === 'CREATE' ? 1 : 2;
+          break;
+        case 'column':
+          seconds += change.property === 'dataType' ? 10 : 1;
+          break;
+        case 'type':
+          seconds += 2;
+          break;
+        case 'view':
+        case 'materializedView':
+          seconds += 3;
+          break;
+        case 'function':
+          seconds += 2;
+          break;
+        default:
+          seconds += 1;
+      }
+    }
+
+    if (seconds < 60) return `${seconds} seconds`;
+    if (seconds < 3600) return `${Math.ceil(seconds / 60)} minutes`;
+    return `${Math.ceil(seconds / 3600)} hours`;
+  }
+}
+
+// Export all sub-modules
+export { ObjectMatcher } from './object-matcher.js';
+export { PropertyDiffer } from './property-differ.js';
+export { DependencyResolver } from './dependency-resolver.js';
+export { ChangeClassifier } from './change-classifier.js';
+export { RiskTagger } from './risk-tagger.js';

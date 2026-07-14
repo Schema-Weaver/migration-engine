@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Tests (not published)
+tests/
+__tests__/
+*.test.js
+*.spec.js
+coverage/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Development
+.eslintcache
+*.tsbuildinfo
+
+# Atlas binary
+atlas
+atlas.exe
+
+# Temporary files
+*.tmp
+*.bak
+scratch/
