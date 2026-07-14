@@ -118,7 +118,7 @@ SQL ──► Introspector ──► Translator ──► Differ ──► DDL G
 ## Installation
 
 ```bash
-npm install pg-migration-engine pg
+npm install pg-migration-engine
 ```
 
 ---
