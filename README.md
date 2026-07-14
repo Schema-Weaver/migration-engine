@@ -127,7 +127,7 @@ npm install pg-migration-engine
 
 ```javascript
 import pg from 'pg';
-import { PgMigrationEngine } from 'pg-migration-engine';
+import { SwMigrationEngine } from 'pg-migration-engine';
 
 const pool = new pg.Pool({ 
   host: 'localhost', 
@@ -137,7 +137,7 @@ const pool = new pg.Pool({
   password: 'pass'
 });
 
-const engine = new PgMigrationEngine();
+const engine = new SwMigrationEngine();
 
 // Introspect current database
 const snapshot = await engine.introspect(pool);
@@ -236,13 +236,13 @@ Full API: [API Reference](https://github.com/Schema-Weaver/pg-migration-engine/w
 
 ```javascript
 import { parsePostgresSQL } from 'pg-ddl-parser';
-import { PgMigrationEngine } from 'pg-migration-engine';
+import { SwMigrationEngine } from 'pg-migration-engine';
 
 // Parse DDL → desired schema
 const desired = parsePostgresSQL(fs.readFileSync('schema.sql', 'utf8'));
 
 // Migrate
-const engine = new PgMigrationEngine();
+const engine = new SwMigrationEngine();
 await engine.migrate(pool, convertParsedToSnapshot(desired));
 ```
 
